@@ -1,3 +1,7 @@
+from pathlib import Path
 
-def load_data(path: str):
-    pass
+
+class DataLoader:
+    def load(self, path: Path) -> bytes:
+        with open(path, "rb") as f:
+            return f.read()
