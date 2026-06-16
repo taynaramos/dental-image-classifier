@@ -1,0 +1,23 @@
+# Arquivos de bytecode gerados ao rodar o Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Arquivos de empacotamento e distribuição
+dist/
+build/
+*.egg-info/
+
+# Ambientes virtuais (Virtual Environments)
+venv/
+env/
+ENV/
+*.env
+
+# Configurações locais e bancos de dados de IDEs
+.idea/
+.vscode/
+*.sqlite3
+
+# Logs de execução
+*.log
