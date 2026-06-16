@@ -33,3 +33,24 @@ aproximadamente **3.000 conjuntos de 5 fotos** (uma foto por vista).
 | 5 | Requisitos | Documento de requisitos funcionais e não funcionais. |
 | 6 | Design, arquitetura e Git | Arquitetura do sistema, fluxo de dados e organização do repositório (branches, commits, colaboração). |
 | Final | Apresentação | Demonstração do sistema (máx. 10 min). |
+
+## Project Structure
+
+```
+dental-image-classifier/
+├── data/
+├── docs/
+├── notebooks/
+├── src/
+│   ├── data/
+│   ├── preprocessing/
+│   ├── models/
+│   ├── training/
+│   ├── evaluation/
+│   ├── inference/
+│   └── utils/
+├── tests/
+├── requirements.txt
+├── README.md
+└── main.py
+```
