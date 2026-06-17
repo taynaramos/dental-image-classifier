@@ -1,1 +1,8 @@
 # Project dependencies
+gdown
+torch
+torchvision
+Pillow
+scikit-learn
+seaborn
+matplotlib
