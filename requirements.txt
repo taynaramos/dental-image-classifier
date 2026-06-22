@@ -6,3 +6,4 @@ Pillow
 scikit-learn
 seaborn
 matplotlib
+wandb
