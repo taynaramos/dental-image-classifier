@@ -3,6 +3,7 @@ gdown
 torch
 torchvision
 Pillow
+numpy
 scikit-learn
 seaborn
 matplotlib

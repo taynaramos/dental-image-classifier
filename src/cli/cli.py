@@ -2,6 +2,8 @@ import argparse
 from typing import ClassVar, Protocol
 
 from .cmd.evaluate import Evaluate
+from .cmd.pca_predict import PcaPredict
+from .cmd.pca_train import PcaTrain
 from .cmd.predict import Predict
 from .cmd.train import Train
 
@@ -25,6 +27,8 @@ class CLI:
         Evaluate,
         Train,
         Predict,
+        PcaTrain,
+        PcaPredict,
     ]
 
     def run(self, argv: list[str] | None = None) -> None:
