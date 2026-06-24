@@ -1,4 +1,4 @@
-"""SVC classifier that operates on PCA-reduced luma features."""
+"""Classificador SVC que opera sobre features reduzidas pelo PCA."""
 
 from __future__ import annotations
 
@@ -13,14 +13,14 @@ from .feature_extractor import FeatureExtractor
 
 @dataclass
 class Prediction:
-    """Result for a single image.
+    """Resultado da predição para uma única imagem.
 
-    Attributes
+    Atributos
     ----------
     label:
-        Predicted class label.
+        Rótulo da classe predita (mais provável).
     probabilities:
-        Mapping from each class label to its Platt-scaled probability.
+        Dicionário mapeando cada classe à sua probabilidade (escala de Platt).
     """
 
     label: str
@@ -28,21 +28,23 @@ class Prediction:
 
 
 class DentalClassifier:
-    """SVC classifier built on top of :class:`FeatureExtractor`.
+    """Classificador SVC construído sobre o :class:`FeatureExtractor`.
 
-    The full pipeline is: luma pixels → StandardScaler → PCA → SVC (RBF).
+    O pipeline completo é: pixels de luminância → StandardScaler → PCA → SVC (RBF).
 
-    Parameters
+    Parâmetros
     ----------
     n_components:
-        Passed directly to :class:`FeatureExtractor`.  ``None`` triggers the
-        automatic 95%-variance selection.
+        Repassado ao :class:`FeatureExtractor`.  ``None`` aciona a seleção
+        automática pelo limiar de variância de 95 %.
     auto_variance_threshold:
-        Used when *n_components* is ``None``.
-    C, gamma:
-        SVC regularisation and kernel coefficient.
+        Usado quando *n_components* é ``None``.
+    C:
+        Parâmetro de regularização do SVC.
+    gamma:
+        Coeficiente do kernel RBF (``"scale"`` ou ``"auto"`` ou float).
     seed:
-        Shared seed for PCA and SVC.
+        Semente compartilhada entre PCA e SVC.
     """
 
     def __init__(
@@ -59,7 +61,7 @@ class DentalClassifier:
             auto_variance_threshold=auto_variance_threshold,
             seed=seed,
         )
-        # probability=True enables predict_proba via Platt scaling
+        # probability=True habilita predict_proba via escala de Platt
         self._svc = SVC(
             kernel="rbf",
             C=C,
@@ -71,55 +73,86 @@ class DentalClassifier:
         self.classes_: list[str] | None = None
 
     # ------------------------------------------------------------------
-    # Training
+    # Treinamento
     # ------------------------------------------------------------------
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "DentalClassifier":
-        """Fit the full pipeline on training data."""
+        """Ajusta o pipeline completo nos dados de treino.
+
+        Parâmetros
+        ----------
+        X:
+            Features brutas de luminância com forma ``(n_amostras, n_pixels)``.
+        y:
+            Rótulos de classe com forma ``(n_amostras,)``.
+
+        Retorna
+        -------
+        self
+        """
+        # Ajusta scaler + PCA e projeta os dados de treino
         X_pca = self.extractor.fit_transform(X)
         self._svc.fit(X_pca, y)
         self.classes_ = list(self._svc.classes_)
         return self
 
     # ------------------------------------------------------------------
-    # Inference
+    # Inferência
     # ------------------------------------------------------------------
 
     def predict(self, X: np.ndarray) -> np.ndarray:
-        """Return the predicted class label for each row in *X*."""
+        """Retorna o rótulo predito para cada linha de *X*.
+
+        Parâmetros
+        ----------
+        X:
+            Features brutas com forma ``(n_amostras, n_pixels)``.
+        """
         return self._svc.predict(self.extractor.transform(X))
 
     def predict_proba(self, X: np.ndarray) -> list[Prediction]:
-        """Return a :class:`Prediction` per row in *X*.
+        """Retorna uma :class:`Prediction` por linha de *X*.
 
-        Each :class:`Prediction` contains the most likely label and a
-        probability for every class.
+        Cada :class:`Prediction` contém o rótulo mais provável e a
+        probabilidade associada a cada classe.
+
+        Parâmetros
+        ----------
+        X:
+            Features brutas com forma ``(n_amostras, n_pixels)``.
+
+        Retorna
+        -------
+        list[Prediction]
+            Um elemento por amostra.
         """
-        self._require_fitted()
+        self._verificar_ajuste()
         X_pca = self.extractor.transform(X)
-        proba_matrix = self._svc.predict_proba(X_pca)
-        labels = self._svc.predict(X_pca)
+        # predict_proba retorna probabilidades por classe (escala de Platt)
+        matriz_proba = self._svc.predict_proba(X_pca)
+        rotulos = self._svc.predict(X_pca)
 
         return [
             Prediction(
-                label=str(label),
+                label=str(rotulo),
                 probabilities={
                     cls: float(prob)
-                    for cls, prob in zip(self.classes_, row)  # type: ignore[arg-type]
+                    for cls, prob in zip(self.classes_, linha)  # type: ignore[arg-type]
                 },
             )
-            for label, row in zip(labels, proba_matrix)
+            for rotulo, linha in zip(rotulos, matriz_proba)
         ]
 
     def score(self, X: np.ndarray, y: np.ndarray) -> float:
+        """Retorna a acurácia do classificador em *(X, y)*."""
         return self._svc.score(self.extractor.transform(X), y)
 
     # ------------------------------------------------------------------
-    # Persistence
+    # Persistência
     # ------------------------------------------------------------------
 
     def save(self, path: Path | str) -> None:
-        """Serialise the classifier (extractor + SVC) to *path*."""
+        """Serializa o classificador (extrator + SVC) em *path* via :mod:`joblib`."""
         import joblib
 
         joblib.dump(
@@ -133,20 +166,23 @@ class DentalClassifier:
 
     @classmethod
     def load(cls, path: Path | str) -> "DentalClassifier":
-        """Restore a serialised classifier from *path*."""
+        """Restaura um classificador serializado a partir de *path*."""
         import joblib
 
-        data = joblib.load(path)
+        dados = joblib.load(path)
         obj = cls.__new__(cls)
-        obj.extractor = data["extractor"]
-        obj._svc = data["svc"]
-        obj.classes_ = data["classes"]
+        obj.extractor = dados["extractor"]
+        obj._svc = dados["svc"]
+        obj.classes_ = dados["classes"]
         return obj
 
     # ------------------------------------------------------------------
-    # Internal
+    # Auxiliares internos
     # ------------------------------------------------------------------
 
-    def _require_fitted(self) -> None:
+    def _verificar_ajuste(self) -> None:
+        """Lança erro caso o classificador ainda não tenha sido treinado."""
         if self.classes_ is None:
-            raise RuntimeError("DentalClassifier is not fitted yet. Call fit() first.")
+            raise RuntimeError(
+                "DentalClassifier ainda não foi treinado. Chame fit() primeiro."
+            )
