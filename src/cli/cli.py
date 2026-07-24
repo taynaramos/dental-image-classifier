@@ -1,8 +1,8 @@
 import argparse
 from typing import ClassVar, Protocol
 
-from .cmd.pca_predict import PcaPredict
-from .cmd.pca_train import PcaTrain
+from .cmd.torch_predict import TorchPredict
+from .cmd.torch_train import TorchTrain
 
 
 class Command(Protocol):
@@ -19,11 +19,11 @@ class CLI:
     description = (
         "Classifica imagens intraorais odontológicas em 5 vistas "
         "(frontal, superior, inferior, lateral direita, lateral esquerda) "
-        "usando PCA + SVC."
+        "usando uma CNN em PyTorch."
     )
     commands: list[type[Command]] = [
-        PcaTrain,
-        PcaPredict,
+        TorchTrain,
+        TorchPredict,
     ]
 
     def run(self, argv: list[str] | None = None) -> None:
@@ -32,3 +32,7 @@ class CLI:
         commands = {cls.name: cls(subparsers) for cls in self.commands}
         args = parser.parse_args(argv)
         commands[args.command].run(args)
+
+
+if __name__ == "__main__":
+    CLI().run()
