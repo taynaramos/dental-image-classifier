@@ -2,7 +2,7 @@
 
 Classifica imagens intraorais odontológicas em 5 vistas — **frontal**, **superior**, **inferior**, **lateral direita** e **lateral esquerda** — usando uma **CNN em PyTorch**, treinada do zero (sem pesos pré-treinados nem transfer learning).
 
-Para treinar com GPU no Google Colab, use o notebook [`experiments/colab_training.ipynb`](experiments/colab_training.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/taynaramos/dental-image-classifier/blob/feature/colab-training/experiments/colab_training.ipynb) — ele clona o repositório, copia o dataset do seu Google Drive e salva o checkpoint de volta no Drive.
+Para treinar com GPU no Google Colab, use o notebook [`experiments/colab_training.ipynb`](experiments/colab_training.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/taynaramos/dental-image-classifier/blob/pytorch-kfold/experiments/colab_training.ipynb) — ele clona o repositório, copia o dataset do seu Google Drive e salva o checkpoint de volta no Drive.
 
 ---
 
