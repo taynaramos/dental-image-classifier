@@ -1,9 +1,8 @@
 import argparse
 from typing import ClassVar, Protocol
 
-from .cmd.evaluate import Evaluate
-from .cmd.predict import Predict
-from .cmd.train import Train
+from .cmd.pca_predict import PcaPredict
+from .cmd.pca_train import PcaTrain
 
 
 class Command(Protocol):
@@ -18,13 +17,13 @@ class Command(Protocol):
 class CLI:
     name = "dental-classifier"
     description = (
-        "Classify dental intraoral images into 5 views "
-        "(frontal, superior, inferior, lateral direita, lateral esquerda)."
+        "Classifica imagens intraorais odontológicas em 5 vistas "
+        "(frontal, superior, inferior, lateral direita, lateral esquerda) "
+        "usando PCA + SVC."
     )
     commands: list[type[Command]] = [
-        Evaluate,
-        Train,
-        Predict,
+        PcaTrain,
+        PcaPredict,
     ]
 
     def run(self, argv: list[str] | None = None) -> None:

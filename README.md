@@ -1,82 +1,155 @@
-# Classificador de Imagens Odontológicas
+# Dental Image Classifier — PCA + SVC
 
-Projeto integrador da disciplina **Engenharia de Software para IA e Frameworks Profundos**
-(Especialização em Deep Learning — CIn/UFPE, Turma III).
-Prof. Fernando Maciano de Paula Neto.
+## 1. O que é esta solução
 
-Grupo: **UFPE - Classificador de Imagens Odontológicas**
+Esta branch implementa o processo de classificação sem o uso do PyTorch.
 
-## Problema
+O fluxo da solução é:
 
-Classificação de **imagens odontológicas intraorais**. Dada uma foto intraoral, o sistema
-identifica qual das **5 vistas** ela representa:
-
-- frontal
-- inferior (oclusal inferior)
-- superior (oclusal superior)
-- lateral direita
-- lateral esquerda
-
-## Dados
-
-Base de dados privada cedida pela empresa de um dos membros do grupo:
-aproximadamente **3.000 conjuntos de 5 fotos** (uma foto por vista).
-
-## Project Structure
-
-```
-dental-image-classifier/
-├── data/
-├── docs/
-├── notebooks/
-├── src/
-│   ├── data/
-│   ├── preprocessing/
-│   ├── models/
-│   ├── training/
-│   ├── evaluation/
-│   ├── inference/
-│   └── utils/
-├── tests/
-├── requirements.txt
-├── README.md
-└── main.py
+```text
+Leitura da imagem
+→ pré-processamento
+→ extração de características com PCA
+→ classificação com SVC
 ```
 
-## Quickstart
+As imagens são convertidas para luminância, redimensionadas e transformadas em vetores. Depois, o PCA reduz a quantidade de características e o SVC realiza a classificação.
 
-A CLI é invocada via `python main.py <comando>`. Para listar os comandos disponíveis e suas opções:
+---
+
+## 2. Módulos da solução
+
+### `DentalDataset`
+
+Arquivo:
+
+```text
+src/pca_svc/dataset.py
+```
+
+Responsável por preprocessamento das imagens para o treino, validação e teste:
+
+* carregar as imagens;
+* dividir os dados em treino, validação e teste;
+* converter as imagens para luminância;
+* redimensionar as imagens;
+* transformar cada imagem em um vetor;
+* gerar os rótulos.
+
+### `FeatureExtractor`
+
+Arquivo:
+
+```text
+src/pca_svc/feature_extractor.py
+```
+
+Responsável por realizar aquilo que as camadas da CNN fazem de forma automatica, isto é, extrair as caracteristicas da imagem que nos perimtam realizar a classificação. Diante disso o modulo faz o seguinte:
+
+* normalizar os dados;
+* aplicar PCA;
+* reduzir a dimensionalidade das imagens para o espaço dos PC para inferencia.
+  
+
+### `DentalClassifier`
+
+Arquivo:
+
+```text
+src/pca_svc/model.py
+```
+
+Responsável por realizar a parte final do processo, pega as caractericas representadas nos PCs, e realiza a classificação das imagens. Diante disso o modulo faz o seguinte:
+
+* treinar o classificador SVC;
+* realizar predições;
+* retornar probabilidades por classe;
+* avaliar o modelo;
+* salvar e carregar o modelo treinado.
+
+### `CLI`
+
+Arquivo:
+
+```text
+src/cli/cli.py
+```
+
+Disponibiliza os comandos:
+
+```text
+pca-train
+pca-predict
+```
+
+---
+
+## 3. Como usar
+
+### Criar o ambiente virtual
+
+Linux ou macOS:
 
 ```bash
-python3 main.py --help
-python3 main.py <comando> --help
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
-Comandos:
+Windows:
 
-| Comando | Descrição | Argumentos |
-|---------|-----------|------------|
-| `train` | Treina o classificador de vistas. | `--train-dir` (padrão: `data/training`) |
-| `evaluate` | Avalia um modelo treinado num conjunto de teste. | `--train-dir` (padrão: `data/training`), `--test-dir` (padrão: `data/test`) |
-| `predict` | Classifica uma única imagem intraoral. | — |
+```powershell
+py -m venv .venv
+.venv\Scripts\Activate.ps1
+```
 
-Exemplos:
+### Instalar as dependências
 
 ```bash
-python3 main.py train --train-dir data/training
-python3 main.py evaluate --test-dir data/test
-python3 main.py predict
+pip install -r requirements.txt
 ```
 
+### Carregar o módulo principal
 
-## Entregas
+```python
+from src.cli import CLI
 
-| # | Entrega | Conteúdo |
-|---|---------|----------|
-| 1 | Funções, modularização e repositório | Escolha do problema, primeiras funções, repositório no GitHub, README, `requirements.txt`. Inclui tipagem e uso de NumPy. |
-| 2 | PyTorch — Parte 1 | Conversão para tensores, `Dataset`, `DataLoader`, verificação de shapes/dtypes/device. |
-| 3 | PyTorch — Parte 2 | Modelo (`nn.Module`), loss, otimizador, laço de treino/validação, salvar/carregar modelo, inferência. |
-| 4 | Testes com `unittest` | Suíte de testes (dados, pré-processamento, tensores, saída do modelo, salvamento). |
-| 5 | Requisitos | Documento de requisitos funcionais e não funcionais. |
-| 6 | Design, arquitetura e Git | Arquitetura do sistema, fluxo de dados e organização do repositório (branches, commits, colaboração). |
-| Final | Apresentação | Demonstração do sistema (máx. 10 min). |
+CLI().run()
+```
+
+Como a branch ainda não possui um `main.py`, a CLI pode ser executada desta forma:
+
+```bash
+python -c "from src.cli import CLI; CLI().run()" --help
+```
+
+### Treinar o modelo
+
+```bash
+python -c "from src.cli import CLI; CLI().run()" \
+  pca-train \
+  --dataset-path data/dataset \
+  --model-out artifacts/pca_svc_model.pkl \
+  --image-size 128 \
+  --variance-threshold 0.95 \
+  --seed 42
+```
+
+### Classificar uma imagem
+
+```bash
+python -c "from src.cli import CLI; CLI().run()" \
+  pca-predict \
+  --model artifacts/pca_svc_model.pkl \
+  --image caminho/para/imagem.jpeg \
+  --image-size 128
+```
+
+### Classificar um folder de imagens
+
+```bash
+python -c "from src.cli import CLI; CLI().run()" \
+  pca-predict \
+  --model artifacts/pca_svc_model.pkl \
+  --image-dir caminho/para/pasta \
+  --image-size 128
+```
