@@ -1,8 +1,8 @@
-# Dental Image Classifier — PCA + SVC
+# Módulo PCA + SVC
 
 ## 1. O que é esta solução
 
-Esta branch implementa o processo de classificação sem o uso do PyTorch.
+Este módulo (`src/pca_svc/`) implementa o processo de classificação sem o uso do PyTorch.
 
 O fluxo da solução é:
 
@@ -105,28 +105,15 @@ py -m venv .venv
 ### Instalar as dependências
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-pca-svc.txt
 ```
 
-### Carregar o módulo principal
-
-```python
-from src.cli import CLI
-
-CLI().run()
-```
-
-Como a branch ainda não possui um `main.py`, a CLI pode ser executada desta forma:
-
-```bash
-python -c "from src.cli import CLI; CLI().run()" --help
-```
+(a partir da raiz do projeto — este módulo não requer PyTorch nem torchvision)
 
 ### Treinar o modelo
 
 ```bash
-python -c "from src.cli import CLI; CLI().run()" \
-  pca-train \
+python -m src.cli.cli pca-train \
   --dataset-path data/dataset \
   --model-out artifacts/pca_svc_model.pkl \
   --image-size 128 \
@@ -137,8 +124,7 @@ python -c "from src.cli import CLI; CLI().run()" \
 ### Classificar uma imagem
 
 ```bash
-python -c "from src.cli import CLI; CLI().run()" \
-  pca-predict \
+python -m src.cli.cli pca-predict \
   --model artifacts/pca_svc_model.pkl \
   --image caminho/para/imagem.jpeg \
   --image-size 128
@@ -147,8 +133,7 @@ python -c "from src.cli import CLI; CLI().run()" \
 ### Classificar um folder de imagens
 
 ```bash
-python -c "from src.cli import CLI; CLI().run()" \
-  pca-predict \
+python -m src.cli.cli pca-predict \
   --model artifacts/pca_svc_model.pkl \
   --image-dir caminho/para/pasta \
   --image-size 128

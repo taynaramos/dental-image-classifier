@@ -2,7 +2,7 @@
 # Não requer PyTorch nem torchvision.
 #
 # Instalação:
-#   pip install -r requirements-numpy.txt
+#   pip install -r requirements-pca-svc.txt
 #
 # Versões testadas com Python 3.14
 
