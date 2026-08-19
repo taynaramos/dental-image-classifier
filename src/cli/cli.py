@@ -5,6 +5,8 @@ from .cmd.kfold_predict import KfoldPredict
 from .cmd.kfold_train import KfoldTrain
 from .cmd.pca_predict import PcaPredict
 from .cmd.pca_train import PcaTrain
+from .cmd.resnet18_predict import Resnet18Predict
+from .cmd.resnet18_train import Resnet18Train
 
 
 class Command(Protocol):
@@ -21,13 +23,16 @@ class CLI:
     description = (
         "Classifica imagens intraorais odontológicas em 5 vistas "
         "(frontal, superior, inferior, lateral direita, lateral esquerda) "
-        "usando um dos módulos de classificação disponíveis (PCA + SVC ou CNN em PyTorch)."
+        "usando um dos módulos de classificação disponíveis "
+        "(PCA + SVC, CNN em PyTorch treinada do zero, ou transfer learning com ResNet-18)."
     )
     commands: list[type[Command]] = [
         PcaTrain,
         PcaPredict,
         KfoldTrain,
         KfoldPredict,
+        Resnet18Train,
+        Resnet18Predict,
     ]
 
     def run(self, argv: list[str] | None = None) -> None:
