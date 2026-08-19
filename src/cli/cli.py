@@ -1,6 +1,8 @@
 import argparse
 from typing import ClassVar, Protocol
 
+from .cmd.kfold_predict import KfoldPredict
+from .cmd.kfold_train import KfoldTrain
 from .cmd.pca_predict import PcaPredict
 from .cmd.pca_train import PcaTrain
 
@@ -19,11 +21,13 @@ class CLI:
     description = (
         "Classifica imagens intraorais odontológicas em 5 vistas "
         "(frontal, superior, inferior, lateral direita, lateral esquerda) "
-        "usando PCA + SVC."
+        "usando um dos módulos de classificação disponíveis (PCA + SVC ou CNN em PyTorch)."
     )
     commands: list[type[Command]] = [
         PcaTrain,
         PcaPredict,
+        KfoldTrain,
+        KfoldPredict,
     ]
 
     def run(self, argv: list[str] | None = None) -> None:

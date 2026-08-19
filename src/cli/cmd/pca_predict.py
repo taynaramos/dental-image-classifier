@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, TYPE_CHECKING
 
-import numpy as np
-from PIL import Image
+if TYPE_CHECKING:
+    import numpy as np
 
-from src.pca_svc.dataset import _STEM_TO_LABEL
-from src.pca_svc.model import DentalClassifier, Prediction
+    from src.pca_svc.model import Prediction
 
 # Extensões aceitas para busca em diretórios
 _EXTENSOES_JPEG = {".jpeg", ".jpg"}
@@ -54,6 +53,10 @@ class PcaPredict:
 
     def run(self, args: argparse.Namespace) -> None:
         """Carrega o modelo e executa a inferência nas imagens fornecidas."""
+        import numpy as np
+
+        from src.pca_svc.model import DentalClassifier
+
         print(f"[modelo] carregando de {args.model}")
         classificador = DentalClassifier.load(args.model)
 
@@ -83,7 +86,7 @@ class PcaPredict:
 # Auxiliares
 # ------------------------------------------------------------------
 
-def _carregar_luma(path: Path, image_size: tuple[int, int]) -> np.ndarray:
+def _carregar_luma(path: Path, image_size: tuple[int, int]) -> "np.ndarray":
     """Carrega uma imagem, extrai o canal Y (luminância) e a achata.
 
     Parâmetros
@@ -98,6 +101,9 @@ def _carregar_luma(path: Path, image_size: tuple[int, int]) -> np.ndarray:
     np.ndarray
         Vetor achatado de float32 com ``largura * altura`` elementos.
     """
+    import numpy as np
+    from PIL import Image
+
     img = Image.open(path).convert("YCbCr")
     luma, *_ = img.split()  # descarta Cb e Cr
     luma = luma.resize(image_size, Image.LANCZOS)

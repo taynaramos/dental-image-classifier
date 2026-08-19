@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, TYPE_CHECKING
 
-import numpy as np
-
-from src.pca_svc.dataset import DentalDataset
-from src.pca_svc.model import DentalClassifier
+if TYPE_CHECKING:
+    import numpy as np
 
 
 class PcaTrain:
@@ -73,6 +71,9 @@ class PcaTrain:
 
     def run(self, args: argparse.Namespace) -> None:
         """Executa o fluxo completo: carrega dados, treina e salva o modelo."""
+        from src.pca_svc.dataset import DentalDataset
+        from src.pca_svc.model import DentalClassifier
+
         tamanho = (args.image_size, args.image_size)
 
         # --- Carregamento e divisão do dataset ---
@@ -138,8 +139,10 @@ class PcaTrain:
         print(f"\n[modelo] salvo em {args.model_out}")
 
 
-def _imprimir_tabela_variancia(cumulativa: np.ndarray) -> None:
+def _imprimir_tabela_variancia(cumulativa: "np.ndarray") -> None:
     """Exibe uma tabela com o número de componentes necessários por limiar de variância."""
+    import numpy as np
+
     limiares = [0.80, 0.90, 0.95, 0.99]
     cabecalho = "  limiar | componentes"
     print(f"\n[pca] variância acumulada\n{cabecalho}")
