@@ -21,3 +21,17 @@ ENV/
 
 # Logs de execução
 *.log
+
+# Dataset de imagens
+data/dataset/
+# Layout ImageFolder materializado automaticamente pelo pipeline PyTorch
+data/dataset_imagefolder/
+
+# Modelos treinados (binários grandes, regeneráveis via torch-train)
+artifacts/
+
+# Ambiente virtual (variante com ponto, ex.: python -m venv .venv)
+.venv/
+
+# Checkpoints do Jupyter
+.ipynb_checkpoints/
