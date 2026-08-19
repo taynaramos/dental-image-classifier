@@ -113,7 +113,7 @@ pip install -r requirements-pca-svc.txt
 ### Treinar o modelo
 
 ```bash
-python -m src.cli.cli pca-train \
+python main.py pca-train \
   --dataset-path data/dataset \
   --model-out artifacts/pca_svc_model.pkl \
   --image-size 128 \
@@ -124,7 +124,7 @@ python -m src.cli.cli pca-train \
 ### Classificar uma imagem
 
 ```bash
-python -m src.cli.cli pca-predict \
+python main.py pca-predict \
   --model artifacts/pca_svc_model.pkl \
   --image caminho/para/imagem.jpeg \
   --image-size 128
@@ -133,7 +133,7 @@ python -m src.cli.cli pca-predict \
 ### Classificar um folder de imagens
 
 ```bash
-python -m src.cli.cli pca-predict \
+python main.py pca-predict \
   --model artifacts/pca_svc_model.pkl \
   --image-dir caminho/para/pasta \
   --image-size 128

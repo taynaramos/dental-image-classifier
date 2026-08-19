@@ -41,7 +41,7 @@ A CNN é implementada manualmente e usa `AdaptiveAvgPool2d` antes do classificad
 ```text
 src/
 ├── cli/
-│   ├── cli.py                  # registra os comandos de todos os módulos (python -m src.cli.cli)
+│   ├── cli.py                  # registra os comandos de todos os módulos (entry-point: python main.py)
 │   └── cmd/
 │       ├── kfold_train.py      # comando kfold-train
 │       └── kfold_predict.py    # comando kfold-predict
@@ -166,7 +166,7 @@ pip install -r requirements-pytorch-kfold.txt
 ### Treinar o modelo
 
 ```bash
-python -m src.cli.cli kfold-train \
+python main.py kfold-train \
     --dataset-path data/dataset \
     --epochs 20 \
     --batch-size 32 \
@@ -181,7 +181,7 @@ Outras opções úteis: `--grayscale` / `--no-grayscale` (padrão: escala de cin
 ### Classificar uma imagem
 
 ```bash
-python -m src.cli.cli kfold-predict \
+python main.py kfold-predict \
     --model artifacts/kfold_model.pth \
     --image caminho/imagem.jpg
 ```
@@ -189,14 +189,14 @@ python -m src.cli.cli kfold-predict \
 ### Classificar uma pasta de imagens
 
 ```bash
-python -m src.cli.cli kfold-predict \
+python main.py kfold-predict \
     --model artifacts/kfold_model.pth \
     --image-dir caminho/para/pasta
 ```
 
 `kfold-predict` imprime a classe prevista e a probabilidade de cada uma das 5 vistas para cada imagem.
 
-> `python -m src.cli.cli --help` lista os comandos disponíveis.
+> `python main.py --help` lista os comandos disponíveis.
 
 ---
 
@@ -207,8 +207,8 @@ O projeto pode ser validado de **duas formas equivalentes**, já que ambas execu
 ### Opção A — CLI
 
 ```bash
-python -m src.cli.cli kfold-train --dataset-path data/dataset
-python -m src.cli.cli kfold-predict --model artifacts/kfold_model.pth --image caminho/imagem.jpg
+python main.py kfold-train --dataset-path data/dataset
+python main.py kfold-predict --model artifacts/kfold_model.pth --image caminho/imagem.jpg
 ```
 
 Mais rápido para reproduzir o pipeline de ponta a ponta ou integrar em scripts/automação.
