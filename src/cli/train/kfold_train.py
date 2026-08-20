@@ -64,57 +64,71 @@ class KfoldTrain:
 
     def run(self, args: argparse.Namespace) -> None:
         """Executa o fluxo completo: prepara dados, treina, avalia e salva o modelo."""
-        from src.pytorch_kfold.dataset import build_dataloaders, resolve_imagefolder_root
-        from src.pytorch_kfold.model import DentalCNN, ModelConfig
-        from src.pytorch_kfold.trainer import Trainer
-        from src.pytorch_kfold.utils import get_device, save_checkpoint, set_seed
+        train_kfold(args)
 
-        set_seed(args.seed)
-        device = get_device()
-        print(f"[dispositivo] usando {device}")
 
-        # --- Dataset: garante o layout ImageFolder e cria os DataLoaders ---
-        imagefolder_root = resolve_imagefolder_root(
-            args.dataset_path,
-            train_ratio=args.train_ratio,
-            val_ratio=args.val_ratio,
-            test_ratio=args.test_ratio,
-            seed=args.seed,
-        )
-        train_loader, val_loader, test_loader, classes = build_dataloaders(
-            imagefolder_root,
-            image_size=args.image_size,
-            batch_size=args.batch_size,
-            grayscale=args.grayscale,
-            num_workers=args.num_workers,
-        )
-        print(f"[dataset] classes ({len(classes)}): {classes}")
-        print(
-            f"[dataset] batches — treino: {len(train_loader)}  val: {len(val_loader)}  teste: {len(test_loader)}"
-        )
+def train_kfold(args: argparse.Namespace) -> None:
+    """Lógica de treino do ``kfold-train``, reutilizável pelo comando ``train`` unificado.
 
-        # --- Modelo e treinamento ---
-        config = ModelConfig(
-            image_size=args.image_size,
-            grayscale=args.grayscale,
-            hidden_dim=args.hidden_dim,
-            dropout=args.dropout,
-        )
-        model = DentalCNN(
-            num_classes=len(classes),
-            in_channels=config.in_channels,
-            hidden_dim=config.hidden_dim,
-            dropout=config.dropout,
-        )
+    Espera um *namespace* com os mesmos atributos definidos em
+    :meth:`KfoldTrain.__init__`: ``dataset_path``, ``model_out``, ``epochs``,
+    ``patience``, ``min_delta``, ``batch_size``, ``learning_rate``,
+    ``image_size``, ``grayscale``, ``hidden_dim``, ``dropout``,
+    ``train_ratio``, ``val_ratio``, ``test_ratio``, ``num_workers``, ``seed``.
+    """
+    from src.pytorch_kfold.dataset import build_dataloaders, resolve_imagefolder_root
+    from src.pytorch_kfold.model import DentalCNN, ModelConfig
+    from src.pytorch_kfold.trainer import Trainer
+    from src.pytorch_kfold.utils import get_device, save_checkpoint, set_seed
 
-        trainer = Trainer(model, device, learning_rate=args.learning_rate)
-        trainer.fit(train_loader, val_loader, epochs=args.epochs, patience=args.patience, min_delta=args.min_delta)
+    set_seed(args.seed)
+    device = get_device()
+    print(f"[dispositivo] usando {device}")
 
-        # --- Avaliação final no conjunto de teste ---
-        test_loss, test_acc = trainer.evaluate(test_loader)
-        print(f"\nTest Loss: {test_loss:.4f}")
-        print(f"Test Accuracy: {test_acc:.4f}")
+    # --- Dataset: garante o layout ImageFolder e cria os DataLoaders ---
+    imagefolder_root = resolve_imagefolder_root(
+        args.dataset_path,
+        train_ratio=args.train_ratio,
+        val_ratio=args.val_ratio,
+        test_ratio=args.test_ratio,
+        seed=args.seed,
+    )
+    train_loader, val_loader, test_loader, classes = build_dataloaders(
+        imagefolder_root,
+        image_size=args.image_size,
+        batch_size=args.batch_size,
+        grayscale=args.grayscale,
+        num_workers=args.num_workers,
+    )
+    print(f"[dataset] classes ({len(classes)}): {classes}")
+    print(
+        f"[dataset] batches — treino: {len(train_loader)}  val: {len(val_loader)}  teste: {len(test_loader)}"
+    )
 
-        # --- Persistência ---
-        save_checkpoint(args.model_out, model, classes, config)
-        print(f"\n[modelo] salvo em {args.model_out}")
+    # --- Modelo e treinamento ---
+    config = ModelConfig(
+        image_size=args.image_size,
+        grayscale=args.grayscale,
+        hidden_dim=args.hidden_dim,
+        dropout=args.dropout,
+    )
+    model = DentalCNN(
+        num_classes=len(classes),
+        in_channels=config.in_channels,
+        hidden_dim=config.hidden_dim,
+        dropout=config.dropout,
+    )
+
+    trainer = Trainer(model, device, learning_rate=args.learning_rate)
+    history = trainer.fit(
+        train_loader, val_loader, epochs=args.epochs, patience=args.patience, min_delta=args.min_delta
+    )
+
+    # --- Avaliação final no conjunto de teste ---
+    test_loss, test_acc = trainer.evaluate(test_loader)
+    print(f"\nTest Loss: {test_loss:.4f}")
+    print(f"Test Accuracy: {test_acc:.4f}")
+
+    # --- Persistência (inclui a loss/acurácia de treino por época) ---
+    save_checkpoint(args.model_out, model, classes, config, history=history)
+    print(f"\n[modelo] salvo em {args.model_out}")

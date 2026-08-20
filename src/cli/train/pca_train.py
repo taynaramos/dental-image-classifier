@@ -23,7 +23,7 @@ class PcaTrain:
             "--dataset-path",
             type=Path,
             required=True,
-            help="Diretório raiz com uma sub-pasta por sujeito.",
+            help="Diretório raiz do dataset (uma sub-pasta por sujeito, ou já dividido em train/val/test).",
         )
         parser.add_argument(
             "--model-out",
@@ -71,72 +71,84 @@ class PcaTrain:
 
     def run(self, args: argparse.Namespace) -> None:
         """Executa o fluxo completo: carrega dados, treina e salva o modelo."""
-        from src.pca_svc.dataset import DentalDataset
-        from src.pca_svc.model import DentalClassifier
+        train_pca(args)
 
-        tamanho = (args.image_size, args.image_size)
 
-        # --- Carregamento e divisão do dataset ---
-        print(f"[dataset] carregando de {args.dataset_path}")
-        dataset = DentalDataset(
-            args.dataset_path,
-            image_size=tamanho,
-            train_ratio=args.train_ratio,
-            val_ratio=args.val_ratio,
-            test_ratio=args.test_ratio,
-            seed=args.seed,
-        )
-        contagens = dataset.subject_counts()
-        print(
-            f"[dataset] sujeitos — "
-            f"treino: {contagens['train']}  val: {contagens['val']}  teste: {contagens['test']}"
-        )
+def train_pca(args: argparse.Namespace) -> None:
+    """Lógica de treino do ``pca-train``, reutilizável pelo comando ``train`` unificado.
 
-        print("[dataset] carregando partição de treino (luminância) …")
-        X_train, y_train = dataset.load_split("train")
+    Espera um *namespace* com os mesmos atributos definidos em
+    :meth:`PcaTrain.__init__`: ``dataset_path``, ``model_out``, ``image_size``,
+    ``n_components``, ``variance_threshold``, ``C``, ``gamma``, ``train_ratio``,
+    ``val_ratio``, ``test_ratio``, ``seed``.
+    """
+    from src.pca_svc.dataset import DentalDataset
+    from src.pca_svc.model import DentalClassifier
 
-        print("[dataset] carregando partição de validação …")
-        X_val, y_val = dataset.load_split("val")
+    tamanho = (args.image_size, args.image_size)
 
-        print("[dataset] carregando partição de teste …")
-        X_test, y_test = dataset.load_split("test")
+    # --- Carregamento e divisão do dataset ---
+    print(f"[dataset] carregando de {args.dataset_path}")
+    dataset = DentalDataset(
+        args.dataset_path,
+        image_size=tamanho,
+        train_ratio=args.train_ratio,
+        val_ratio=args.val_ratio,
+        test_ratio=args.test_ratio,
+        seed=args.seed,
+    )
+    contagens = dataset.subject_counts()
+    rotulo_contagem = "sujeitos" if dataset.layout == "subjects" else "imagens"
+    print(
+        f"[dataset] {rotulo_contagem} — "
+        f"treino: {contagens['train']}  val: {contagens['val']}  teste: {contagens['test']}"
+    )
 
-        print(
-            f"[dataset] formas — "
-            f"treino: {X_train.shape}  val: {X_val.shape}  teste: {X_test.shape}"
-        )
+    print("[dataset] carregando partição de treino (luminância) …")
+    X_train, y_train = dataset.load_split("train")
 
-        # --- Treinamento: PCA + SVC ---
-        print("[treino] ajustando PCA + SVC …")
-        classificador = DentalClassifier(
-            n_components=args.n_components,
-            auto_variance_threshold=args.variance_threshold,
-            C=args.C,
-            gamma=args.gamma,
-            seed=args.seed,
-        )
-        classificador.fit(X_train, y_train)
+    print("[dataset] carregando partição de validação …")
+    X_val, y_val = dataset.load_split("val")
 
-        # Exibe resumo do PCA
-        extrator = classificador.extractor
-        print(
-            f"[pca] componentes selecionados : {extrator.n_components_}  "
-            f"(variância retida: {extrator._pca.explained_variance_ratio_.sum():.4f})"
-        )
-        _imprimir_tabela_variancia(extrator.cumulative_explained_variance())
+    print("[dataset] carregando partição de teste …")
+    X_test, y_test = dataset.load_split("test")
 
-        # --- Avaliação ---
-        acc_treino = classificador.score(X_train, y_train)
-        acc_val    = classificador.score(X_val,   y_val)
-        acc_teste  = classificador.score(X_test,  y_test)
+    print(
+        f"[dataset] formas — "
+        f"treino: {X_train.shape}  val: {X_val.shape}  teste: {X_test.shape}"
+    )
 
-        print(f"\n[resultado] acurácia treino     : {acc_treino:.4f}")
-        print(f"[resultado] acurácia validação  : {acc_val:.4f}")
-        print(f"[resultado] acurácia teste      : {acc_teste:.4f}")
+    # --- Treinamento: PCA + SVC ---
+    print("[treino] ajustando PCA + SVC …")
+    classificador = DentalClassifier(
+        n_components=args.n_components,
+        auto_variance_threshold=args.variance_threshold,
+        C=args.C,
+        gamma=args.gamma,
+        seed=args.seed,
+    )
+    classificador.fit(X_train, y_train)
 
-        # --- Persistência ---
-        classificador.save(args.model_out)
-        print(f"\n[modelo] salvo em {args.model_out}")
+    # Exibe resumo do PCA
+    extrator = classificador.extractor
+    print(
+        f"[pca] componentes selecionados : {extrator.n_components_}  "
+        f"(variância retida: {extrator._pca.explained_variance_ratio_.sum():.4f})"
+    )
+    _imprimir_tabela_variancia(extrator.cumulative_explained_variance())
+
+    # --- Avaliação ---
+    acc_treino = classificador.score(X_train, y_train)
+    acc_val    = classificador.score(X_val,   y_val)
+    acc_teste  = classificador.score(X_test,  y_test)
+
+    print(f"\n[resultado] acurácia treino     : {acc_treino:.4f}")
+    print(f"[resultado] acurácia validação  : {acc_val:.4f}")
+    print(f"[resultado] acurácia teste      : {acc_teste:.4f}")
+
+    # --- Persistência ---
+    classificador.save(args.model_out)
+    print(f"\n[modelo] salvo em {args.model_out}")
 
 
 def _imprimir_tabela_variancia(cumulativa: "np.ndarray") -> None:

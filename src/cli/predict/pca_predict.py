@@ -6,13 +6,10 @@ import argparse
 from pathlib import Path
 from typing import ClassVar, TYPE_CHECKING
 
+from src.cli.tools.io import coletar_caminhos, imprimir_predicao
+
 if TYPE_CHECKING:
-    import numpy as np
-
     from src.pca_svc.model import Prediction
-
-# Extensões aceitas para busca em diretórios
-_EXTENSOES_JPEG = {".jpeg", ".jpg"}
 
 
 class PcaPredict:
@@ -53,72 +50,34 @@ class PcaPredict:
 
     def run(self, args: argparse.Namespace) -> None:
         """Carrega o modelo e executa a inferência nas imagens fornecidas."""
-        import numpy as np
+        caminhos = coletar_caminhos(args.image, args.image_dir)
+        if not caminhos:
+            print(f"Nenhuma imagem JPEG encontrada em {args.image_dir}")
+            return
 
-        from src.pca_svc.model import DentalClassifier
-
-        print(f"[modelo] carregando de {args.model}")
-        classificador = DentalClassifier.load(args.model)
-
-        tamanho = (args.image_size, args.image_size)
-
-        # Coleta os caminhos de imagem a classificar
-        if args.image is not None:
-            caminhos = [args.image]
-        else:
-            caminhos = sorted(
-                p for p in args.image_dir.iterdir()
-                if p.suffix.lower() in _EXTENSOES_JPEG
-            )
-            if not caminhos:
-                print(f"Nenhuma imagem JPEG encontrada em {args.image_dir}")
-                return
-
-        # Carrega todas as imagens como luminância e empilha em uma matriz
-        X = np.stack([_carregar_luma(p, tamanho) for p in caminhos])
-        predicoes = classificador.predict_proba(X)
+        predicoes = predict_pca(args.model, args.image_size, caminhos)
 
         for caminho, pred in zip(caminhos, predicoes):
-            _imprimir_predicao(caminho, pred)
+            imprimir_predicao(caminho, pred)
 
 
-# ------------------------------------------------------------------
-# Auxiliares
-# ------------------------------------------------------------------
+def predict_pca(
+    checkpoint: Path, image_size: int, caminhos: list[Path]
+) -> list["Prediction"]:
+    """Classifica uma lista de imagens com um modelo PCA-SVC salvo.
 
-def _carregar_luma(path: Path, image_size: tuple[int, int]) -> "np.ndarray":
-    """Carrega uma imagem, extrai o canal Y (luminância) e a achata.
-
-    Parâmetros
-    ----------
-    path:
-        Caminho para o arquivo JPEG.
-    image_size:
-        (largura, altura) para redimensionar a imagem.
-
-    Retorna
-    -------
-    np.ndarray
-        Vetor achatado de float32 com ``largura * altura`` elementos.
+    Reutilizada pelo comando ``predict`` unificado — retorna uma
+    :class:`~src.pca_svc.model.Prediction` por caminho, na mesma ordem de
+    *caminhos*.
     """
     import numpy as np
-    from PIL import Image
 
-    img = Image.open(path).convert("YCbCr")
-    luma, *_ = img.split()  # descarta Cb e Cr
-    luma = luma.resize(image_size, Image.LANCZOS)
-    return np.array(luma, dtype=np.float32).ravel()
+    from src.pca_svc.dataset import carregar_luma
+    from src.pca_svc.model import DentalClassifier
 
+    print(f"[modelo] carregando de {checkpoint}")
+    classificador = DentalClassifier.load(checkpoint)
 
-def _imprimir_predicao(path: Path, pred: Prediction) -> None:
-    """Imprime o resultado da predição de forma legível.
-
-    Exibe o rótulo predito e uma barra de probabilidade para cada classe,
-    ordenadas da mais para a menos provável.
-    """
-    print(f"\n{path.name}")
-    print(f"  classe predita : {pred.label}")
-    print("  probabilidades :")
-    for cls, prob in sorted(pred.probabilities.items(), key=lambda kv: -kv[1]):
-        barra = "#" * int(prob * 30)
-        print(f"    {cls:<22} {prob:5.1%}  {barra}")
+    tamanho = (image_size, image_size)
+    X = np.stack([carregar_luma(p, tamanho) for p in caminhos])
+    return classificador.predict_proba(X)

@@ -1,12 +1,14 @@
 import argparse
 from typing import ClassVar, Protocol
 
-from .cmd.kfold_predict import KfoldPredict
-from .cmd.kfold_train import KfoldTrain
-from .cmd.pca_predict import PcaPredict
-from .cmd.pca_train import PcaTrain
-from .cmd.resnet18_predict import Resnet18Predict
-from .cmd.resnet18_train import Resnet18Train
+from .predict.kfold_predict import KfoldPredict
+from .predict.pca_predict import PcaPredict
+from .predict.predict import Predict
+from .predict.resnet18_predict import Resnet18Predict
+from .train.kfold_train import KfoldTrain
+from .train.pca_train import PcaTrain
+from .train.resnet18_train import Resnet18Train
+from .train.train import Train
 
 
 class Command(Protocol):
@@ -27,6 +29,8 @@ class CLI:
         "(PCA + SVC, CNN em PyTorch treinada do zero, ou transfer learning com ResNet-18)."
     )
     commands: list[type[Command]] = [
+        Train,
+        Predict,
         PcaTrain,
         PcaPredict,
         KfoldTrain,

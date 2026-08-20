@@ -56,50 +56,62 @@ class Resnet18Train:
 
     def run(self, args: argparse.Namespace) -> None:
         """Executa o fluxo completo: prepara dados, treina em duas fases, avalia e salva o modelo."""
-        from src.pytorch_resnet18_transfer.dataset import build_dataloaders, resolve_imagefolder_root
-        from src.pytorch_resnet18_transfer.model import DentalResNetTransfer
-        from src.pytorch_resnet18_transfer.trainer import Trainer
-        from src.pytorch_resnet18_transfer.utils import get_device, save_checkpoint, set_seed
+        train_resnet18(args)
 
-        set_seed(args.seed)
-        device = get_device()
-        print(f"[dispositivo] usando {device}")
 
-        # --- Dataset: garante o layout ImageFolder e cria os DataLoaders ---
-        imagefolder_root = resolve_imagefolder_root(
-            args.dataset_path,
-            train_ratio=args.train_ratio,
-            val_ratio=args.val_ratio,
-            test_ratio=args.test_ratio,
-            seed=args.seed,
-        )
-        train_loader, val_loader, test_loader, classes = build_dataloaders(
-            imagefolder_root,
-            image_size=args.image_size,
-            batch_size=args.batch_size,
-            num_workers=args.num_workers,
-        )
-        print(f"[dataset] classes ({len(classes)}): {classes}")
-        print(
-            f"[dataset] batches — treino: {len(train_loader)}  val: {len(val_loader)}  teste: {len(test_loader)}"
-        )
+def train_resnet18(args: argparse.Namespace) -> None:
+    """Lógica de treino do ``resnet18-train``, reutilizável pelo comando ``train`` unificado.
 
-        # --- Modelo: extrator ResNet-18 (congelado na Fase 1) + classificador linear ---
-        model = DentalResNetTransfer(num_classes=len(classes))
+    Espera um *namespace* com os mesmos atributos definidos em
+    :meth:`Resnet18Train.__init__`: ``dataset_path``, ``model_out``,
+    ``frozen_epochs``, ``finetune_epochs``, ``head_lr``, ``finetune_lr``,
+    ``batch_size``, ``image_size``, ``train_ratio``, ``val_ratio``,
+    ``test_ratio``, ``num_workers``, ``seed``.
+    """
+    from src.pytorch_resnet18_transfer.dataset import build_dataloaders, resolve_imagefolder_root
+    from src.pytorch_resnet18_transfer.model import DentalResNetTransfer
+    from src.pytorch_resnet18_transfer.trainer import Trainer
+    from src.pytorch_resnet18_transfer.utils import get_device, save_checkpoint, set_seed
 
-        trainer = Trainer(model, device, head_lr=args.head_lr, finetune_lr=args.finetune_lr)
-        trainer.fit(
-            train_loader,
-            val_loader,
-            frozen_epochs=args.frozen_epochs,
-            finetune_epochs=args.finetune_epochs,
-        )
+    set_seed(args.seed)
+    device = get_device()
+    print(f"[dispositivo] usando {device}")
 
-        # --- Avaliação final no conjunto de teste ---
-        test_loss, test_acc = trainer.evaluate(test_loader)
-        print(f"\nTest Loss: {test_loss:.4f}")
-        print(f"Test Accuracy: {test_acc:.4f}")
+    # --- Dataset: garante o layout ImageFolder e cria os DataLoaders ---
+    imagefolder_root = resolve_imagefolder_root(
+        args.dataset_path,
+        train_ratio=args.train_ratio,
+        val_ratio=args.val_ratio,
+        test_ratio=args.test_ratio,
+        seed=args.seed,
+    )
+    train_loader, val_loader, test_loader, classes = build_dataloaders(
+        imagefolder_root,
+        image_size=args.image_size,
+        batch_size=args.batch_size,
+        num_workers=args.num_workers,
+    )
+    print(f"[dataset] classes ({len(classes)}): {classes}")
+    print(
+        f"[dataset] batches — treino: {len(train_loader)}  val: {len(val_loader)}  teste: {len(test_loader)}"
+    )
 
-        # --- Persistência ---
-        save_checkpoint(args.model_out, model, classes, args.image_size)
-        print(f"\n[modelo] salvo em {args.model_out}")
+    # --- Modelo: extrator ResNet-18 (congelado na Fase 1) + classificador linear ---
+    model = DentalResNetTransfer(num_classes=len(classes))
+
+    trainer = Trainer(model, device, head_lr=args.head_lr, finetune_lr=args.finetune_lr)
+    history = trainer.fit(
+        train_loader,
+        val_loader,
+        frozen_epochs=args.frozen_epochs,
+        finetune_epochs=args.finetune_epochs,
+    )
+
+    # --- Avaliação final no conjunto de teste ---
+    test_loss, test_acc = trainer.evaluate(test_loader)
+    print(f"\nTest Loss: {test_loss:.4f}")
+    print(f"Test Accuracy: {test_acc:.4f}")
+
+    # --- Persistência (inclui a loss/acurácia de treino por época/fase) ---
+    save_checkpoint(args.model_out, model, classes, args.image_size, history=history)
+    print(f"\n[modelo] salvo em {args.model_out}")
