@@ -10,6 +10,7 @@ import numpy as np
 import torch
 
 from .model import DentalCNN, ModelConfig
+from .trainer import History
 
 
 def get_device() -> torch.device:
@@ -30,12 +31,16 @@ def save_checkpoint(
     model: DentalCNN,
     classes: list[str],
     config: ModelConfig,
+    *,
+    history: History | None = None,
 ) -> None:
     """Salva o checkpoint do modelo via :func:`torch.save`.
 
     Grava ``model_state_dict``, a lista de *classes* (ordem dos índices de
-    saída) e a *config* (hiperparâmetros necessários para reconstruir a rede
-    e repetir o pré-processamento na inferência).
+    saída), a *config* (hiperparâmetros necessários para reconstruir a rede
+    e repetir o pré-processamento na inferência) e, se fornecido, o
+    ``history`` do treino — loss/acurácia de treino e validação por época —
+    para consulta posterior sem precisar re-treinar.
     """
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     torch.save(
@@ -43,6 +48,7 @@ def save_checkpoint(
             "model_state_dict": model.state_dict(),
             "classes": classes,
             "config": asdict(config),
+            "history": asdict(history) if history is not None else None,
         },
         path,
     )
@@ -77,3 +83,13 @@ def load_checkpoint(
     model.eval()
 
     return model, classes, config
+
+
+def load_history(path: Path | str) -> History | None:
+    """Lê apenas o ``history`` (loss/acurácia por época) de um checkpoint salvo.
+
+    Retorna ``None`` se o checkpoint foi salvo sem ``history``.
+    """
+    checkpoint = torch.load(path, map_location="cpu")
+    dados = checkpoint.get("history")
+    return History(**dados) if dados is not None else None

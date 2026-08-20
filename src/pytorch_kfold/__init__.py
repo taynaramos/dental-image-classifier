@@ -2,7 +2,7 @@ from .dataset import build_dataloaders, build_transform, resolve_imagefolder_roo
 from .model import DentalCNN, ModelConfig
 from .predict import Prediction, predict
 from .trainer import History, Trainer
-from .utils import get_device, load_checkpoint, save_checkpoint, set_seed
+from .utils import get_device, load_checkpoint, load_history, save_checkpoint, set_seed
 
 __all__ = [
     "build_dataloaders",
@@ -16,6 +16,7 @@ __all__ = [
     "Trainer",
     "get_device",
     "load_checkpoint",
+    "load_history",
     "save_checkpoint",
     "set_seed",
 ]

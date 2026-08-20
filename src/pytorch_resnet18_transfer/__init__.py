@@ -3,7 +3,7 @@ from .feature_extractor import ResNetFeatureExtractor
 from .model import DentalResNetTransfer
 from .predict import Prediction, predict
 from .trainer import History, Trainer
-from .utils import get_device, load_checkpoint, save_checkpoint, set_seed
+from .utils import get_device, load_checkpoint, load_history, save_checkpoint, set_seed
 
 __all__ = [
     "build_dataloaders",
@@ -18,6 +18,7 @@ __all__ = [
     "Trainer",
     "get_device",
     "load_checkpoint",
+    "load_history",
     "save_checkpoint",
     "set_seed",
 ]
