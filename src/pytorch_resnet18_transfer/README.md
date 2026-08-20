@@ -28,10 +28,13 @@ Um backbone pré-treinado na ImageNet já sabe extrair features visuais genéric
 ```text
 src/
 ├── cli/
-│   ├── cli.py                     # registra os comandos de todos os módulos (entry-point: python main.py)
-│   └── cmd/
-│       ├── resnet18_train.py      # comando resnet18-train
-│       └── resnet18_predict.py    # comando resnet18-predict
+│   ├── cli.py                          # registra os comandos de todos os módulos (entry-point: python main.py)
+│   ├── train/
+│   │   └── resnet18_train.py           # comando resnet18-train
+│   ├── predict/
+│   │   └── resnet18_predict.py         # comando resnet18-predict
+│   └── tools/
+│       └── io.py                       # coletar_caminhos/imprimir_predicao, compartilhados entre os comandos *-predict
 │
 └── pytorch_resnet18_transfer/
     ├── dataset.py                 # dataloader + pré-processamento (transforms com estatísticas da ImageNet)
@@ -210,5 +213,6 @@ Pronto para rodar no Google Colab com GPU — clona o repositório, baixa o data
 * `model_state_dict` — pesos da rede (extrator + classificador);
 * `classes` — lista de rótulos, na ordem usada pelos índices de saída;
 * `image_size` — necessário para repetir exatamente o mesmo pré-processamento usado no treino.
+* `history` (opcional) — loss/acurácia de treino e validação por época, com a fase (`"frozen"`/`"finetune"`) de cada uma (ver `History` em `trainer.py`).
 
-`load_checkpoint(path)` reconstrói o modelo (com o extrator já **liberado**, pronto para inferência ou para continuar o fine-tune), carrega os pesos e o deixa em modo de avaliação (`eval()`), pronto para chamadas a `predict(...)`.
+`load_checkpoint(path)` reconstrói o modelo (com o extrator já **liberado**, pronto para inferência ou para continuar o fine-tune), carrega os pesos e o deixa em modo de avaliação (`eval()`), pronto para chamadas a `predict(...)`. `load_history(path)` lê só o `history` salvo (`None` se o checkpoint foi salvo sem ele).

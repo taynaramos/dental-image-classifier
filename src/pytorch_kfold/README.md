@@ -1,6 +1,8 @@
 # Módulo PyTorch CNN (k-fold)
 
-Classifica imagens intraorais odontológicas em 5 vistas — **frontal**, **superior**, **inferior**, **lateral direita** e **lateral esquerda** — usando uma **CNN em PyTorch** (`src/pytorch_kfold/`), treinada do zero (sem pesos pré-treinados nem transfer learning), com validação cruzada k-fold por sujeito.
+Classifica imagens intraorais odontológicas em 5 vistas — **frontal**, **superior**, **inferior**, **lateral direita** e **lateral esquerda** — usando uma **CNN em PyTorch** (`src/pytorch_kfold/`), treinada do zero (sem pesos pré-treinados nem transfer learning).
+
+> **Sobre o nome do módulo:** `kfold-train`/`kfold-predict` (CLI) e `Trainer.fit` treinam com um único split treino/val/teste (70/15/15 por sujeito) — igual aos outros dois módulos. A **validação cruzada k-fold de verdade** (5 folds por sujeito, um modelo do zero por fold, média ± desvio padrão da acurácia) existe apenas como células manuais na seção 12 do notebook Colab (ver [seção 8](#8-validação-cruzada-k-fold-de-verdade) abaixo) — não é acionável pela CLI.
 
 Para treinar com GPU no Google Colab, use o notebook [`notebooks/pytorch_kfold_colab.ipynb`](../../notebooks/pytorch_kfold_colab.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/taynaramos/dental-image-classifier/blob/main/notebooks/pytorch_kfold_colab.ipynb) — ele clona o repositório, copia o dataset do seu Google Drive e salva o checkpoint de volta no Drive.
 
@@ -15,6 +17,7 @@ Para treinar com GPU no Google Colab, use o notebook [`notebooks/pytorch_kfold_c
 5. [Uso via CLI](#5-uso-via-cli)
 6. [Validando o projeto](#6-validando-o-projeto)
 7. [Persistência e inferência posterior](#7-persistência-e-inferência-posterior)
+8. [Validação cruzada k-fold de verdade](#8-validação-cruzada-k-fold-de-verdade)
 
 ---
 
@@ -41,10 +44,13 @@ A CNN é implementada manualmente e usa `AdaptiveAvgPool2d` antes do classificad
 ```text
 src/
 ├── cli/
-│   ├── cli.py                  # registra os comandos de todos os módulos (entry-point: python main.py)
-│   └── cmd/
-│       ├── kfold_train.py      # comando kfold-train
-│       └── kfold_predict.py    # comando kfold-predict
+│   ├── cli.py                       # registra os comandos de todos os módulos (entry-point: python main.py)
+│   ├── train/
+│   │   └── kfold_train.py           # comando kfold-train
+│   ├── predict/
+│   │   └── kfold_predict.py         # comando kfold-predict
+│   └── tools/
+│       └── io.py                    # coletar_caminhos/imprimir_predicao, compartilhados entre os comandos *-predict
 │
 └── pytorch_kfold/
     ├── dataset.py
@@ -249,5 +255,22 @@ Como as duas formas compartilham a mesma implementação, os resultados (loss, a
 * `model_state_dict` — pesos da rede;
 * `classes` — lista de rótulos, na ordem usada pelos índices de saída;
 * `config` — `image_size`, `grayscale`, `hidden_dim` e `dropout`, necessários para reconstruir a `DentalCNN` e repetir exatamente o mesmo pré-processamento usado no treino.
+* `history` (opcional) — loss/acurácia de treino e validação por época (ver `History` em `trainer.py`), para consultar a curva de treino depois sem re-treinar.
 
-`load_checkpoint(path)` reconstrói o modelo, carrega os pesos e o deixa em modo de avaliação (`eval()`), pronto para chamadas a `predict(...)` — usado tanto pelo `kfold-predict` quanto pelo notebook.
+`load_checkpoint(path)` reconstrói o modelo, carrega os pesos e o deixa em modo de avaliação (`eval()`), pronto para chamadas a `predict(...)` — usado tanto pelo `kfold-predict` quanto pelo notebook. `load_history(path)` lê só o `history` salvo (`None` se o checkpoint foi salvo sem ele).
+
+---
+
+## 8. Validação cruzada k-fold de verdade
+
+O que está descrito nas seções anteriores (CLI e notebook de treino) é um **único split** treino/val/teste — o mesmo esquema usado pelos módulos `pca_svc` e `pytorch_resnet18_transfer`. Isso significa que a acurácia de teste é medida sobre só ~45 sujeitos (15% de 300), uma amostra pequena para estimar o desempenho com confiança.
+
+Para uma estimativa mais robusta, a **seção 12** do notebook [`notebooks/pytorch_kfold_colab.ipynb`](../../notebooks/pytorch_kfold_colab.ipynb) implementa validação cruzada k-fold de verdade, à mão (sem `sklearn.model_selection`):
+
+* os 300 sujeitos são embaralhados (seed fixa) e cortados em **5 folds de 60**, sem sobreposição;
+* em cada rodada, 1 fold é teste e os outros 4 (240 sujeitos) são treino;
+* um **modelo novo (`DentalCNN`) é treinado do zero a cada fold** — nenhum peso é reaproveitado entre rodadas;
+* o esquema é **treino/teste clássico, sem validação**: cada fold treina por um número **fixo** de épocas (12, escolhido a partir do early stopping da seção 7), e o fold de teste é avaliado uma única vez ao final — nunca influencia decisões de treinamento;
+* o resultado final é a **média ± desvio padrão** da acurácia de teste entre os 5 folds.
+
+Essa validação cruzada serve só para **avaliar a robustez do pipeline** — ela não produz um checkpoint utilizável; o modelo entregável continua sendo o da seção 7 (`kfold-train`/seções 1–11 do notebook). Não há comando de CLI equivalente; para rodar, execute o notebook no Colab (ou localmente) até a seção 7 (as células da seção 12 reaproveitam `DATASET_ROOT`, `IMAGE_SIZE`, `GRAYSCALE`, `BATCH_SIZE`, `SEED` e `device` definidos ali) e depois execute as células da seção 12.

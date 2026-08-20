@@ -36,6 +36,8 @@ Responsável por preprocessamento das imagens para o treino, validação e teste
 * transformar cada imagem em um vetor;
 * gerar os rótulos.
 
+Aceita dois layouts em `--dataset-path`: um diretório bruto com uma sub-pasta por sujeito (divide por sujeito automaticamente, evitando vazamento entre treino/val/teste), ou um diretório já organizado em `train/val/test/<classe>` — o mesmo layout `ImageFolder` produzido por `resolve_imagefolder_root` nos módulos `pytorch_kfold`/`pytorch_resnet18_transfer`, útil para reaproveitar exatamente a mesma partição usada por esses modelos. O layout já dividido é detectado automaticamente; `--train-ratio`/`--val-ratio`/`--test-ratio`/`--seed` são ignorados nesse caso.
+
 ### `FeatureExtractor`
 
 Arquivo:
@@ -111,6 +113,8 @@ pip install -r requirements-pca-svc.txt
 (a partir da raiz do projeto — este módulo não requer PyTorch nem torchvision)
 
 ### Treinar o modelo
+
+`--dataset-path` aceita tanto o dataset bruto (`data/dataset`, uma sub-pasta por sujeito) quanto um layout já dividido (`data/dataset_imagefolder`, com `train/val/test/<classe>`):
 
 ```bash
 python main.py pca-train \
