@@ -62,12 +62,12 @@ def resolve_imagefolder_root(
         Raiz do dataset pronta para ``torchvision.datasets.ImageFolder``.
     """
     dataset_path = Path(dataset_path)
-    if all((dataset_path / split).is_dir() for split in _SPLITS):
+    if all((dataset_path / split).is_dir() for split in _SPLITS) and _layout_completo(dataset_path):
         print(f"[dataset] usando layout ImageFolder existente em {dataset_path}")
         return dataset_path
 
     prepared_root = dataset_path.parent / f"{dataset_path.name}_imagefolder"
-    if all((prepared_root / split).is_dir() for split in _SPLITS):
+    if all((prepared_root / split).is_dir() for split in _SPLITS) and _layout_completo(prepared_root):
         print(f"[dataset] reaproveitando layout preparado em {prepared_root}")
         return prepared_root
 
@@ -99,6 +99,20 @@ def resolve_imagefolder_root(
         f"treino {len(splits['train'])}, val {len(splits['val'])}, teste {len(splits['test'])}"
     )
     return prepared_root
+
+
+def _layout_completo(root: Path) -> bool:
+    """Verifica se todo split tem ao menos uma imagem em ao menos uma classe.
+
+    Um layout ``train``/``val``/``test`` pode existir apenas como diretórios
+    vazios (ex.: preparo anterior interrompido no meio da cópia) — nesse caso
+    não deve ser reaproveitado como se estivesse pronto.
+    """
+    for split in _SPLITS:
+        split_dir = root / split
+        if not any(split_dir.glob("*/*")):
+            return False
+    return True
 
 
 def build_train_transform(image_size: int = 224) -> T.Compose:
