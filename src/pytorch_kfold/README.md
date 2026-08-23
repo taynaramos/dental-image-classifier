@@ -68,12 +68,12 @@ data/
 └── dataset_imagefolder/        # layout train/val/test gerado automaticamente — não versionado
 
 artifacts/
-└── kfold_model.pth             # checkpoint gerado pelo treino — não versionado
+└── kfold_model.pth             # checkpoint gerado pelo treino — versionado no repositório
 
 requirements-pytorch-kfold.txt  # dependências deste módulo (na raiz do projeto)
 ```
 
-> `data/dataset_imagefolder/` e `artifacts/` são gerados a partir do dataset bruto e do código-fonte, por isso ficam de fora do controle de versão (`.gitignore`) — cada execução do treino os recria.
+> `data/dataset_imagefolder/` fica de fora do controle de versão (`.gitignore`), pois é gerada a partir do dataset bruto a cada execução do treino. Já `artifacts/` é versionado — o checkpoint treinado fica disponível no repositório, sem precisar re-treinar para usar `kfold-predict`.
 
 ---
 

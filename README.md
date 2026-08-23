@@ -91,3 +91,14 @@ python main.py train --model kfold --dataset-path data/dataset
 Para os modelos em PyTorch (`kfold`, `resnet18`), o checkpoint salvo por `train` também inclui a loss/acurácia de treino e validação por época (`history`), consultável depois via `load_history(path)` de cada módulo, sem precisar re-treinar.
 
 `train`/`predict` só expõem os parâmetros comuns aos três modelos. Para controle fino de hiperparâmetros específicos, use diretamente `pca-train`/`kfold-train`/`resnet18-train` e seus `*-predict` — consulte o README de cada módulo.
+
+### Usando um checkpoint já treinado
+
+Os checkpoints em `artifacts/` são versionados no repositório — não é necessário treinar do zero para classificar imagens. Depois de clonar o repositório e instalar as dependências do módulo desejado, aponte `predict`/`*-predict` direto para o arquivo `.pth` correspondente:
+
+```bash
+python main.py predict --model kfold --checkpoint artifacts/kfold_model.pth --image caminho/imagem.jpg
+python main.py resnet18-predict --model artifacts/resnet18_transfer_model.pth --image caminho/imagem.jpg
+```
+
+Veja a seção "Persistência e inferência posterior" do README de cada módulo para o conteúdo do checkpoint (pesos, classes, `image_size`/`config` e `history`).

@@ -52,10 +52,12 @@ data/
 └── dataset_imagefolder/           # layout train/val/test gerado automaticamente — não versionado
 
 artifacts/
-└── resnet18_transfer_model.pth    # checkpoint gerado pelo treino — não versionado
+└── resnet18_transfer_model.pth    # checkpoint gerado pelo treino — versionado no repositório
 
 requirements-pytorch-resnet18-transfer.txt   # dependências deste módulo (na raiz do projeto)
 ```
+
+> `data/dataset_imagefolder/` fica de fora do controle de versão (`.gitignore`), pois é gerada a partir do dataset bruto a cada execução do treino. Já `artifacts/` é versionado — o checkpoint treinado fica disponível no repositório, sem precisar re-treinar para usar `resnet18-predict`.
 
 ## 3. Módulos da solução
 
