@@ -1,155 +1,104 @@
-# Dental Image Classifier — PCA + SVC
+# Dental Image Classifier
 
-## 1. O que é esta solução
+Classifica imagens intraorais odontológicas em 5 vistas — **frontal**, **superior**, **inferior**, **lateral direita** e **lateral esquerda**.
 
-Esta branch implementa o processo de classificação sem o uso do PyTorch.
+O projeto reúne três soluções independentes para o mesmo problema, cada uma como um módulo próprio dentro de `src/`, com sua própria documentação e suas próprias dependências:
 
-O fluxo da solução é:
+| Módulo | Abordagem | Documentação | Dependências |
+| --- | --- | --- | --- |
+| [`src/pca_svc/`](src/pca_svc/README.md) | PCA + SVC (numpy/scikit-learn, sem PyTorch) | [src/pca_svc/README.md](src/pca_svc/README.md) | [requirements-pca-svc.txt](requirements-pca-svc.txt) |
+| [`src/pytorch_kfold/`](src/pytorch_kfold/README.md) | CNN em PyTorch, treinada do zero, com validação cruzada k-fold por sujeito | [src/pytorch_kfold/README.md](src/pytorch_kfold/README.md) | [requirements-pytorch-kfold.txt](requirements-pytorch-kfold.txt) |
+| [`src/pytorch_resnet18_transfer/`](src/pytorch_resnet18_transfer/README.md) | Transfer learning: extrator ResNet-18 pré-treinado (ImageNet) + classificador linear | [src/pytorch_resnet18_transfer/README.md](src/pytorch_resnet18_transfer/README.md) | [requirements-pytorch-resnet18-transfer.txt](requirements-pytorch-resnet18-transfer.txt) |
 
-```text
-Leitura da imagem
-→ pré-processamento
-→ extração de características com PCA
-→ classificação com SVC
-```
-
-As imagens são convertidas para luminância, redimensionadas e transformadas em vetores. Depois, o PCA reduz a quantidade de características e o SVC realiza a classificação.
+Cada módulo pode ser instalado e usado isoladamente — instalar apenas `requirements-pca-svc.txt`, por exemplo, não requer PyTorch.
 
 ---
 
-## 2. Módulos da solução
-
-### `DentalDataset`
-
-Arquivo:
+## Estrutura do projeto
 
 ```text
-src/pca_svc/dataset.py
+main.py                          # ponto de entrada da CLI
+
+src/
+├── cli/
+│   ├── cli.py                   # registra os comandos de todos os módulos
+│   ├── train/                   # um comando de treino por módulo (pca-train, kfold-train, resnet18-train, train)
+│   ├── predict/                 # um comando de inferência por módulo (pca-predict, kfold-predict, resnet18-predict, predict)
+│   └── tools/                   # utilitários compartilhados pelos comandos de predição (coletar_caminhos, imprimir_predicao)
+├── pca_svc/                      # módulo PCA + SVC (ver seu próprio README)
+├── pytorch_kfold/                # módulo CNN em PyTorch, treinada do zero (ver seu próprio README)
+└── pytorch_resnet18_transfer/    # módulo transfer learning ResNet-18 (ver seu próprio README)
+
+notebooks/                       # notebooks de cada módulo (Colab e local)
+requirements-pca-svc.txt
+requirements-pytorch-kfold.txt
+requirements-pytorch-resnet18-transfer.txt
 ```
 
-Responsável por preprocessamento das imagens para o treino, validação e teste:
+## Uso via CLI
 
-* carregar as imagens;
-* dividir os dados em treino, validação e teste;
-* converter as imagens para luminância;
-* redimensionar as imagens;
-* transformar cada imagem em um vetor;
-* gerar os rótulos.
+Depois de instalar as dependências do módulo desejado (veja a documentação de cada um), todos os comandos passam pelo mesmo ponto de entrada:
 
-### `FeatureExtractor`
-
-Arquivo:
+```bash
+python main.py --help
+```
 
 ```text
-src/pca_svc/feature_extractor.py
+{train, predict, pca-train, pca-predict, kfold-train, kfold-predict, resnet18-train, resnet18-predict}
 ```
 
-Responsável por realizar aquilo que as camadas da CNN fazem de forma automatica, isto é, extrair as caracteristicas da imagem que nos perimtam realizar a classificação. Diante disso o modulo faz o seguinte:
+### `train` / `predict` — comandos unificados
 
-* normalizar os dados;
-* aplicar PCA;
-* reduzir a dimensionalidade das imagens para o espaço dos PC para inferencia.
-  
-
-### `DentalClassifier`
-
-Arquivo:
-
-```text
-src/pca_svc/model.py
-```
-
-Responsável por realizar a parte final do processo, pega as caractericas representadas nos PCs, e realiza a classificação das imagens. Diante disso o modulo faz o seguinte:
-
-* treinar o classificador SVC;
-* realizar predições;
-* retornar probabilidades por classe;
-* avaliar o modelo;
-* salvar e carregar o modelo treinado.
-
-### `CLI`
-
-Arquivo:
-
-```text
-src/cli/cli.py
-```
-
-Disponibiliza os comandos:
-
-```text
-pca-train
-pca-predict
-```
-
----
-
-## 3. Como usar
-
-### Criar o ambiente virtual
-
-Linux ou macOS:
+`train` e `predict` funcionam para os três modelos, escolhidos via `--model {pca,kfold,resnet18}`:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+python main.py train --model kfold --dataset-path data/dataset
 ```
 
-Windows:
+`predict` tem dois modos, conforme o argumento de entrada:
 
-```powershell
-py -m venv .venv
-.venv\Scripts\Activate.ps1
-```
+* `--image` — **single_inference**: uma única imagem, retorna a classe prevista e o vetor de probabilidades em JSON.
 
-### Instalar as dependências
+  ```bash
+  python main.py predict --model kfold --checkpoint artifacts/kfold_model.pth --image caminho/imagem.jpg
+  ```
+
+  ```json
+  {"class": "frontal", "probabilities": {"frontal": 0.92, "inferior": 0.01, "superior": 0.03, "lateral_direita": 0.02, "lateral_esquerda": 0.02}}
+  ```
+
+* `--image-dir` — **test_case**: uma pasta com as imagens de um caso (uma por vista). Retorna, para cada vista, o arquivo classificado com aquele rótulo — ou `"Not found"` se nenhuma imagem da pasta bateu com essa vista. Com `--probabilities`, o vetor de probabilidades de cada imagem também é incluído.
+
+  ```bash
+  python main.py predict --model kfold --checkpoint artifacts/kfold_model.pth --image-dir caminho/do/caso --probabilities
+  ```
+
+  ```json
+  {
+    "views": {
+      "frontal": "img1.jpg",
+      "inferior": "Not found",
+      "superior": "img3.jpg",
+      "lateral_direita": "img4.jpg",
+      "lateral_esquerda": "img5.jpg"
+    },
+    "probabilities": {
+      "img1.jpg": {"frontal": 0.92, "inferior": 0.01, "...": "..."}
+    }
+  }
+  ```
+
+Para os modelos em PyTorch (`kfold`, `resnet18`), o checkpoint salvo por `train` também inclui a loss/acurácia de treino e validação por época (`history`), consultável depois via `load_history(path)` de cada módulo, sem precisar re-treinar.
+
+`train`/`predict` só expõem os parâmetros comuns aos três modelos. Para controle fino de hiperparâmetros específicos, use diretamente `pca-train`/`kfold-train`/`resnet18-train` e seus `*-predict` — consulte o README de cada módulo.
+
+### Usando um checkpoint já treinado
+
+Os checkpoints em `artifacts/` são versionados no repositório — não é necessário treinar do zero para classificar imagens. Depois de clonar o repositório e instalar as dependências do módulo desejado, aponte `predict`/`*-predict` direto para o arquivo `.pth` correspondente:
 
 ```bash
-pip install -r requirements.txt
+python main.py predict --model kfold --checkpoint artifacts/kfold_model.pth --image caminho/imagem.jpg
+python main.py resnet18-predict --model artifacts/resnet18_transfer_model.pth --image caminho/imagem.jpg
 ```
 
-### Carregar o módulo principal
-
-```python
-from src.cli import CLI
-
-CLI().run()
-```
-
-Como a branch ainda não possui um `main.py`, a CLI pode ser executada desta forma:
-
-```bash
-python -c "from src.cli import CLI; CLI().run()" --help
-```
-
-### Treinar o modelo
-
-```bash
-python -c "from src.cli import CLI; CLI().run()" \
-  pca-train \
-  --dataset-path data/dataset \
-  --model-out artifacts/pca_svc_model.pkl \
-  --image-size 128 \
-  --variance-threshold 0.95 \
-  --seed 42
-```
-
-### Classificar uma imagem
-
-```bash
-python -c "from src.cli import CLI; CLI().run()" \
-  pca-predict \
-  --model artifacts/pca_svc_model.pkl \
-  --image caminho/para/imagem.jpeg \
-  --image-size 128
-```
-
-### Classificar um folder de imagens
-
-```bash
-python -c "from src.cli import CLI; CLI().run()" \
-  pca-predict \
-  --model artifacts/pca_svc_model.pkl \
-  --image-dir caminho/para/pasta \
-  --image-size 128
-```
+Veja a seção "Persistência e inferência posterior" do README de cada módulo para o conteúdo do checkpoint (pesos, classes, `image_size`/`config` e `history`).
